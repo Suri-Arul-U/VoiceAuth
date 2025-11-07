@@ -1,0 +1,12 @@
+numpy
+scipy
+librosa
+soundfile
+torch
+torchaudio
+pymongo
+tqdm
+python-dotenv
+fastapi
+uvicorn
+python-multipart

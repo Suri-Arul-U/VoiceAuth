@@ -1,0 +1,157 @@
+# # dataset.py
+# import os
+# import torch
+# import numpy as np
+# import librosa
+# from torch.utils.data import Dataset
+# import soundfile as sf
+
+# # -----------------------------
+# # Audio Config
+# # -----------------------------
+# SAMPLE_RATE = 16000
+# DURATION = 2.0       # seconds
+# N_MELS = 64
+# N_FFT = 512
+# HOP_LENGTH = 256
+
+# # -----------------------------
+# # Helper functions
+# # -----------------------------
+# def load_wav(path, sr=SAMPLE_RATE, duration=DURATION):
+#     """Load a .wav file, convert to mono, resample, and pad/trim to fixed duration."""
+#     if not os.path.exists(path):
+#         raise FileNotFoundError(f"Audio file not found: {path}")
+#     wav, file_sr = sf.read(path, dtype='float32')
+#     if wav.ndim > 1:
+#         wav = wav.mean(axis=1)
+#     if file_sr != sr:
+#         wav = librosa.resample(wav, orig_sr=file_sr, target_sr=sr)
+#     # Trim or pad
+#     max_len = int(sr * duration)
+#     if len(wav) > max_len:
+#         wav = wav[:max_len]
+#     else:
+#         wav = np.pad(wav, (0, max_len - len(wav)))
+#     return wav
+
+# def wav_to_logmelspec(wav, sr=SAMPLE_RATE, n_mels=N_MELS, n_fft=N_FFT, hop_length=HOP_LENGTH):
+#     """Convert waveform to log-mel spectrogram."""
+#     mel = librosa.feature.melspectrogram(y=wav, sr=sr, n_fft=n_fft, hop_length=hop_length, n_mels=n_mels)
+#     log_mel = librosa.power_to_db(mel, ref=np.max)
+#     # Normalize
+#     log_mel = (log_mel - np.mean(log_mel)) / (np.std(log_mel) + 1e-9)
+#     return log_mel.astype(np.float32)
+
+# # -----------------------------
+# # Dataset class
+# # -----------------------------
+# class StudentAudioDataset(Dataset):
+#     """Loads student audio samples and returns spectrogram tensors."""
+#     def __init__(self, records):
+#         """
+#         records: list of dicts from MongoDB [{ 'student_id': 's01', 'name': 'Arya', 'audio_path': '../samples/student_arya.wav' }]
+#         """
+#         self.records = records
+#         # Label mapping (e.g. s01 -> 0, s02 -> 1, ...)
+#         self.label_map = {}
+#         for rec in records:
+#             sid = rec['student_id']
+#             if sid not in self.label_map:
+#                 self.label_map[sid] = len(self.label_map)
+
+#         # Flatten all items
+#         self.items = []
+#         for rec in records:
+#             self.items.append({
+#                 "path": rec["audio_path"],
+#                 "label": self.label_map[rec["student_id"]],
+#                 "student_id": rec["student_id"],
+#                 "name": rec.get("name", "")
+#             })
+
+#     def __len__(self):
+#         return len(self.items)
+
+#     def __getitem__(self, idx):
+#         item = self.items[idx]
+#         wav = load_wav(item["path"])
+#         mel = wav_to_logmelspec(wav)  # (n_mels, time_frames)
+#         mel = np.expand_dims(mel, axis=0)  # (1, n_mels, time_frames)
+#         return torch.tensor(mel, dtype=torch.float32), torch.tensor(item["label"], dtype=torch.long)
+
+
+
+
+
+
+
+
+
+
+
+
+# dataset.py
+import os
+import torch
+import numpy as np
+import librosa
+from torch.utils.data import Dataset
+import soundfile as sf
+
+SAMPLE_RATE = 16000
+DURATION = 2.0       # seconds
+N_MELS = 64
+N_FFT = 512
+HOP_LENGTH = 256
+
+def load_wav(path, sr=SAMPLE_RATE, duration=DURATION):
+    if not os.path.exists(path):
+        raise FileNotFoundError(f"Audio file not found: {path}")
+    wav, file_sr = sf.read(path, dtype='float32')
+    if wav.ndim > 1:
+        wav = wav.mean(axis=1)
+    if file_sr != sr:
+        wav = librosa.resample(wav, orig_sr=file_sr, target_sr=sr)
+    max_len = int(sr * duration)
+    if len(wav) > max_len:
+        wav = wav[:max_len]
+    else:
+        wav = np.pad(wav, (0, max_len - len(wav)))
+    return wav
+
+def wav_to_logmelspec(wav, sr=SAMPLE_RATE, n_mels=N_MELS, n_fft=N_FFT, hop_length=HOP_LENGTH):
+    mel = librosa.feature.melspectrogram(y=wav, sr=sr, n_fft=n_fft, hop_length=hop_length, n_mels=n_mels)
+    log_mel = librosa.power_to_db(mel, ref=np.max)
+    log_mel = (log_mel - np.mean(log_mel)) / (np.std(log_mel) + 1e-9)
+    return log_mel.astype(np.float32)
+
+class StudentAudioDataset(Dataset):
+    def __init__(self, records):
+        self.records = records
+        self.label_map = {}
+        for rec in records:
+            sid = rec['student_id']
+            if sid not in self.label_map:
+                self.label_map[sid] = len(self.label_map)
+
+        self.items = []
+        for rec in records:
+            if "audio_path" not in rec or not rec["audio_path"]:
+                continue
+            self.items.append({
+                "path": rec["audio_path"],
+                "label": self.label_map[rec["student_id"]],
+                "student_id": rec["student_id"],
+                "name": rec.get("name", "")
+            })
+
+    def __len__(self):
+        return len(self.items)
+
+    def __getitem__(self, idx):
+        item = self.items[idx]
+        wav = load_wav(item["path"])
+        mel = wav_to_logmelspec(wav)  # (n_mels, time_frames)
+        mel = np.expand_dims(mel, axis=0)  # (1, n_mels, time_frames)
+        return torch.tensor(mel, dtype=torch.float32), torch.tensor(item["label"], dtype=torch.long)

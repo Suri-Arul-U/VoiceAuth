@@ -1,0 +1,166 @@
+.dashboard {
+  padding: 20px;
+  font-family: Arial, sans-serif;
+}
+
+.title {
+  font-size: 26px;
+  font-weight: bold;
+  color: #222;
+}
+
+.subtitle {
+  color: #666;
+  margin-bottom: 20px;
+}
+
+.stats-container {
+  display: flex;
+  gap: 15px;
+  margin-bottom: 25px;
+}
+
+.card {
+  flex: 1;
+  background: #fff;
+  border: 1px solid #ddd;
+  border-radius: 10px;
+  padding: 15px;
+  text-align: center;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.records-section {
+  margin-top: 20px;
+}
+
+.records-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.records-table th,
+.records-table td {
+  border: 1px solid #ccc;
+  padding: 10px;
+  text-align: center;
+}
+
+.record-btn {
+  background-color: #6c63ff;
+  color: white;
+  border: none;
+  padding: 6px 12px;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.record-btn:hover {
+  background-color: #584ce0;
+}
+
+.status.recorded {
+  color: green;
+  font-weight: bold;
+}
+
+.nav-header {
+  padding: 16px;
+  display: flex;
+  gap: 16px;
+  background-color: white;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.nav-link {
+  color: #7c3aed;
+  font-weight: 500;
+  text-decoration: none;
+}
+
+.nav-link:hover {
+  color: #6d28d9;
+}
+.dashboard {
+  padding: 20px;
+  font-family: Arial, sans-serif;
+}
+
+.title {
+  font-size: 26px;
+  font-weight: bold;
+  color: #222;
+}
+
+.subtitle {
+  color: #666;
+  margin-bottom: 20px;
+}
+
+.stats-container {
+  display: flex;
+  gap: 15px;
+  margin-bottom: 25px;
+}
+
+.card {
+  flex: 1;
+  background: #fff;
+  border: 1px solid #ddd;
+  border-radius: 10px;
+  padding: 15px;
+  text-align: center;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.records-section {
+  margin-top: 20px;
+}
+
+.records-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.records-table th,
+.records-table td {
+  border: 1px solid #ccc;
+  padding: 10px;
+  text-align: center;
+}
+
+.record-btn {
+  background-color: #6c63ff;
+  color: white;
+  border: none;
+  padding: 6px 12px;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.record-btn:hover {
+  background-color: #584ce0;
+}
+
+.status.recorded {
+  color: green;
+  font-weight: bold;
+}
+
+.nav-header {
+  padding: 16px;
+  display: flex;
+  gap: 16px;
+  background-color: white;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.nav-link {
+  color: #7c3aed;
+  font-weight: 500;
+  text-decoration: none;
+}
+
+.nav-link:hover {
+  color: #6d28d9;
+}
