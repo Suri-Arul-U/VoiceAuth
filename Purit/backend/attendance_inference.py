@@ -123,6 +123,11 @@ def mark_attendance(db, student, status, confidence, class_name):
 # -------------------------
 def _run_attendance_session(class_name):
     db = get_db()
+
+    # ✅ Always clear previous temporary and old attendance for this class
+    db.temp_attendance.delete_many({"class_name": class_name})
+    db.attendance.delete_many({"class_name": class_name})
+    print(f"🧹 Cleared old records for class: {class_name}")
     session = active_sessions[class_name]
     students = list(db.students.find({"class_name": class_name}, {"_id": 0}))
 
@@ -148,25 +153,26 @@ def _run_attendance_session(class_name):
             time.sleep(1)
             if session["stop"]:
                 break
-
         if session["stop"]:
             break
 
         name = student.get("name", "Unknown")
+        print(f"\n🎧 Listening for {name} ({student.get('student_id')})...")
         announce_student(name)
 
+        # Record fresh voice sample for this student
         filename = f"{student.get('student_id')}_{datetime.utcnow().strftime('%Y%m%d_%H%M%S')}.wav"
         filepath = os.path.join(TMP_AUDIO_DIR, filename)
+
+        # 🎙️ Record voice input — this step happens separately per student
         record_audio(filepath, duration=DURATION)
 
-        # Predict
-        if not os.path.exists(filepath):
-            status = "Absent"
-            conf_pct = 0.0
-        else:
-            pred_id, conf = predict(filepath, model, inv_labels, device)
-            conf_pct = float(conf * 100.0)
-            status = "Present" if pred_id == student.get("student_id") and conf_pct >= 85.0 else "Absent"
+        # ✅ Predict for this recorded sample only
+        pred_id, conf = predict(filepath, model, inv_labels, device)
+        conf_pct = float(conf * 100.0)
+
+        # ✅ Mark this student as Present or Absent only
+        status = "Present" if pred_id == student.get("student_id") and conf_pct >= 85.0 else "Absent"
 
         temp_doc = {
             "class_name": class_name,
@@ -175,27 +181,23 @@ def _run_attendance_session(class_name):
             "confidence": conf_pct,
             "status": status,
             "timestamp": datetime.utcnow(),
-            "audio_path": filepath if os.path.exists(filepath) else None,
+            "audio_path": filepath,
         }
 
-        # ✅ Write to temp_attendance for frontend live update
+        # Store result in temporary collection (frontend polls from this)
         db.temp_attendance.update_one(
             {"class_name": class_name, "student_id": student.get("student_id")},
             {"$set": temp_doc},
             upsert=True,
         )
 
-        db.temp_attendance.database.client.admin.command('fsync')  # ✅ flush write
-        time.sleep(3)  # give frontend polling time to catch up
-
-
-        # Add to in-memory result for session
+        # Update in-memory session record for live tracking
         session["results"].append(temp_doc)
 
         print(f"→ {student.get('student_id')} | {name} | {status} | {conf_pct:.2f}%")
 
-        # ✅ Give frontend time to poll this record
-        time.sleep(2)
+        # ✅ Small delay between students to avoid overlap
+    time.sleep(2)
 
     # ✅ Mark session as complete (but don't finalize automatically)
     session["stop"] = True

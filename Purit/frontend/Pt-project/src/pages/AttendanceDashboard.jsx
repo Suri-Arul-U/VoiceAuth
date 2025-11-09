@@ -113,10 +113,21 @@ const AttendanceDashboard = () => {
               // Fetch partial updates
               try {
                 const tempRes = await axios.get(`${API}/attendance/temp/${className}`);
-                const partial = tempRes.data.results || [];
-                if (partial.length > 0) {
-                  setClassStudents((prev) => ({ ...prev, [classId]: partial }));
-                }
+const partial = tempRes.data.results || [];
+
+if (partial.length > 0) {
+  setClassStudents((prev) => {
+    const prevClass = prev[classId] || [];
+    const merged = prevClass.map((s) => {
+      const update = partial.find((p) => p.student_id === s.student_id);
+      return update ? { ...s, ...update } : s;
+    });
+    return { ...prev, [classId]: merged };
+  });
+}
+console.log("🧩 Live partial results:", partial);
+
+
               } catch (tempErr) {
                 console.warn("Temp fetch failed:", tempErr);
               }

@@ -123,10 +123,34 @@ def get_classes(date: Optional[str] = Query(None, description="Filter by date YY
     classes = [stringify_id(c) for c in classes]
     return classes
 
+# @app.post("/classes")
+# def create_class(class_data: dict):
+#     db = get_db()
+#     class_id = str(ObjectId())
+#     cls = {
+#         "_id": class_id,
+#         "class_name": class_data.get("class_name"),
+#         "department": class_data.get("department"),
+#         "students": [],
+#         "attendance_dates": [],
+#         "confidence": 0,
+#         "status": "Not Recorded",
+#         "date": None,
+#         "time": None,
+#     }
+#     db.classes.insert_one(cls)
+#     return {"message": "Class added successfully", "class_id": class_id}
+
+
 @app.post("/classes")
 def create_class(class_data: dict):
     db = get_db()
     class_id = str(ObjectId())
+
+    # ✅ Prevent duplicates by name
+    if db.classes.find_one({"class_name": class_data.get("class_name")}):
+        raise HTTPException(status_code=400, detail="Class already exists")
+
     cls = {
         "_id": class_id,
         "class_name": class_data.get("class_name"),
@@ -139,7 +163,16 @@ def create_class(class_data: dict):
         "time": None,
     }
     db.classes.insert_one(cls)
+
+    # ✅ Clean temp/attendance data for this class if stale
+    db.temp_attendance.delete_many({"class_name": class_data.get("class_name")})
+    db.attendance.delete_many({"class_name": class_data.get("class_name")})
+
     return {"message": "Class added successfully", "class_id": class_id}
+
+
+
+
 
 @app.get("/classes/{class_id}/students")
 def get_class_students(class_id: str):
@@ -154,7 +187,7 @@ def get_class_students(class_id: str):
 
 # -------------------------------------------------------------------
 # ATTENDANCE CONTROL ROUTES (New)
-# -------------------------------------------------------------------
+# ------------------------------------------------------------------- 
 @app.post("/attendance/start/{class_name}")
 def start_attendance(class_name: str):
     """Start a live attendance session for a class."""
