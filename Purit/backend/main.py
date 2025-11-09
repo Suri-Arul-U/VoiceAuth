@@ -10,10 +10,12 @@ from fastapi import (
     File,
     HTTPException,
     Query,
-    Form
+    Form,
+    Request
 )
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
+from fastapi import Request
 
 # Internal modules (ensure these exist in your project)
 from mongodb import get_db, seed_students
@@ -91,6 +93,18 @@ def stringify_id(m):
         pass
     return m
 
+
+
+
+def clean_mongo_ids(data):
+    """Recursively convert ObjectIds to strings for JSON safety."""
+    if isinstance(data, list):
+        return [clean_mongo_ids(item) for item in data]
+    elif isinstance(data, dict):
+        return {k: clean_mongo_ids(v) for k, v in data.items()}
+    elif isinstance(data, ObjectId):
+        return str(data)
+    return data
 # -------------------------------------------------------------------
 # Root
 # -------------------------------------------------------------------
@@ -168,14 +182,70 @@ def resume_attendance(class_name: str):
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
+
+
+@app.get("/attendance/status/{class_name}")
+def check_attendance_status(class_name: str):
+    from attendance_inference import active_sessions
+    session = active_sessions.get(class_name)
+    if not session:
+        return {"status": "completed"}
+    elif session.get("paused"):
+        return {"status": "paused"}
+    elif session.get("stop"):
+        return {"status": "completed"}
+    else:
+        return {"status": "running"}
+
+    
+
+# newly added this temp
+
+@app.get("/attendance/temp/{class_name}")
+def get_temp_results(class_name: str):
+    db = get_db()
+    data = list(db.temp_attendance.find({"class_name": class_name}, {"_id": 0}))
+    return {"results": data}
+
+
+
+
 @app.post("/attendance/finish/{class_name}")
 def finish_attendance(class_name: str):
-    """Finish attendance and finalize results."""
     try:
         results = finish_class_attendance(class_name)
-        return {"status": "completed", "class_name": class_name, "results": results}
+        results = clean_mongo_ids(results)  # ✅ Convert ObjectIds to strings
+        return {"status": "completed", "results": results}
     except Exception as e:
+        print("❌ Error finishing attendance:", e)
         raise HTTPException(status_code=500, detail=str(e))
+
+
+
+
+@app.post("/attendance/update")
+async def update_attendance(request: Request):
+    """Apply feedback and status updates from frontend"""
+    db = get_db()
+    updates = await request.json()
+
+    if not isinstance(updates, list):
+        raise HTTPException(status_code=400, detail="Invalid format — expected list")
+
+    for u in updates:
+        db.attendance.update_one(
+            {"student_id": u.get("student_id"), "class_name": u.get("class_name")},
+            {"$set": {
+                "status": u.get("status"),
+                "feedback": u.get("feedback", ""),
+                "confidence": u.get("confidence", 0),
+                "updated_at": datetime.utcnow()
+            }},
+            upsert=True
+        )
+
+    return {"message": "✅ Attendance updated successfully"}
+
 
 # -------------------------------------------------------------------
 # OLD ATTENDANCE ROUTES (Still supported for direct audio uploads)
@@ -307,18 +377,31 @@ def feedback(feedback_in: FeedbackIn):
     if not student:
         raise HTTPException(status_code=404, detail="Student not found")
 
-    update_data = {"$push": {"voice_samples": feedback_in.audio_path}}
+    # Store audio_path only if it's valid
     if feedback_in.verified:
-        update_data["$push"]["verified_samples"] = feedback_in.audio_path
-    db.students.update_one({"student_id": feedback_in.student_id}, update_data)
+        # Add to verified samples
+        db.students.update_one(
+            {"student_id": feedback_in.student_id},
+            {"$addToSet": {"verified_samples": feedback_in.audio_path}},
+        )
+        message = "✅ Voice sample verified as correct."
+    else:
+        # Move to invalid samples (ignored in training)
+        db.students.update_one(
+            {"student_id": feedback_in.student_id},
+            {"$addToSet": {"invalid_samples": feedback_in.audio_path}},
+        )
+        message = "❌ Voice sample marked as incorrect (ignored in future checks)."
 
+    # Retrain if verified_samples ≥ 5
     verified_count = len(
         db.students.find_one({"student_id": feedback_in.student_id}).get("verified_samples", [])
     )
     if verified_count >= 5:
         trigger_retrain_background()
 
-    return {"status": "ok", "verified_count": verified_count}
+    return {"status": "ok", "message": message, "verified_count": verified_count}
+
 
 # -------------------------------------------------------------------
 # VOICE PROFILES

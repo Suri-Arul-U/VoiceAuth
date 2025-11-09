@@ -135,8 +135,9 @@ def _run_attendance_session(class_name):
     model, inv_labels = load_model(device)
 
     print(f"🎧 Starting live attendance session for {class_name}")
+    session["results"] = []
 
-    for student in students:
+    for idx, student in enumerate(students):
         if session["stop"]:
             print("🛑 Session stopped prematurely.")
             break
@@ -158,6 +159,7 @@ def _run_attendance_session(class_name):
         filepath = os.path.join(TMP_AUDIO_DIR, filename)
         record_audio(filepath, duration=DURATION)
 
+        # Predict
         if not os.path.exists(filepath):
             status = "Absent"
             conf_pct = 0.0
@@ -176,17 +178,28 @@ def _run_attendance_session(class_name):
             "audio_path": filepath if os.path.exists(filepath) else None,
         }
 
+        # ✅ Write to temp_attendance for frontend live update
         db.temp_attendance.update_one(
             {"class_name": class_name, "student_id": student.get("student_id")},
             {"$set": temp_doc},
             upsert=True,
         )
 
+        db.temp_attendance.database.client.admin.command('fsync')  # ✅ flush write
+        time.sleep(3)  # give frontend polling time to catch up
+
+
+        # Add to in-memory result for session
         session["results"].append(temp_doc)
+
         print(f"→ {student.get('student_id')} | {name} | {status} | {conf_pct:.2f}%")
 
+        # ✅ Give frontend time to poll this record
+        time.sleep(2)
+
+    # ✅ Mark session as complete (but don't finalize automatically)
     session["stop"] = True
-    print(f"✅ Attendance completed for {class_name}")
+    print(f"✅ Attendance session finished for {class_name}")
 
 
 # -------------------------
