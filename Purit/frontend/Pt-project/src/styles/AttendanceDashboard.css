@@ -65,11 +65,6 @@
   color: #3b82f6;
 }
 
-.stat-subtitle {
-  color: #999;
-  font-size: 12px;
-}
-
 /* ------------------------
    BUTTONS
 ------------------------ */
@@ -113,61 +108,23 @@
 }
 
 /* ------------------------
-   RECORDS TABLE
+   RECORDING STATUS
 ------------------------ */
-.records-container {
-  background: white;
-  border-radius: 10px;
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.05);
-  overflow: hidden;
-  padding: 10px;
-}
-
-.records-header {
-  padding: 16px 20px;
-  border-bottom: 1px solid #eee;
-}
-
-.records-title {
-  font-size: 16px;
+.record-status {
+  margin: 15px 0;
+  padding: 10px 18px;
+  background: #ede9fe;
+  color: #5b21b6;
+  border-radius: 8px;
   font-weight: 600;
-}
-
-.records-table {
-  width: 100%;
-  border-collapse: collapse;
-  font-size: 14px;
-}
-
-.records-table th {
-  text-align: left;
-  padding: 10px 20px;
-  background: #fafafa;
-  color: #555;
-  font-weight: 500;
-}
-
-.records-table td {
-  padding: 10px 20px;
-  border-top: 1px solid #f0f0f0;
-  color: #444;
-}
-
-.records-table tr:hover td {
-  background: #f9f9f9;
-}
-
-.status-recorded {
-  color: #22c55e;
-  font-weight: 500;
+  text-align: center;
+  animation: fadeIn 0.3s ease-in-out;
 }
 
 /* =======================
-   MODALS (UNIFIED STYLE)
+   MODALS (Add Class)
 ======================= */
-.modal,
-.attendance-modal,
-.modal-overlay {
+.attendance-modal {
   position: fixed;
   top: 0;
   left: 0;
@@ -182,7 +139,6 @@
   animation: fadeIn 0.25s ease-in-out;
 }
 
-.modal,
 .attendance-modal-content {
   background: #fff;
   padding: 24px 28px;
@@ -193,7 +149,6 @@
   animation: scaleIn 0.3s ease-in-out;
 }
 
-.modal h2,
 .attendance-modal-content h2 {
   font-size: 20px;
   font-weight: 600;
@@ -201,7 +156,6 @@
   margin-bottom: 10px;
 }
 
-.modal input,
 .attendance-modal-content input {
   margin: 8px 0;
   width: 100%;
@@ -212,34 +166,10 @@
   transition: 0.2s;
 }
 
-.modal input:focus,
 .attendance-modal-content input:focus {
   outline: none;
   border-color: #9333ea;
   box-shadow: 0 0 0 2px rgba(147, 51, 234, 0.2);
-}
-
-.modal button,
-.attendance-modal-content button {
-  margin-top: 10px;
-  width: 100%;
-  padding: 9px;
-  border-radius: 6px;
-  font-weight: 600;
-  border: none;
-}
-
-.close {
-  position: absolute;
-  top: 12px;
-  right: 14px;
-  font-size: 18px;
-  cursor: pointer;
-  color: #888;
-}
-
-.close:hover {
-  color: #000;
 }
 
 @keyframes fadeIn {
@@ -260,128 +190,390 @@
   }
 }
 
-/* =======================
-   VOICE PROFILE STYLES
-======================= */
-.voice-container {
-  padding: 20px;
-  max-width: 1100px;
-  margin: 40px auto;
-}
-
-.voice-header {
+/* =============================
+   CLASS CARD ROW LAYOUT
+============================= */
+.class-list {
   display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 18px;
+  flex-direction: column;
+  gap: 18px;
+  margin-top: 20px;
 }
 
-.voice-header h2 {
-  font-size: 22px;
-  font-weight: 600;
-  color: #222;
+.class-card-row {
+  background: #ffffff;
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+  overflow: hidden;
+  transition: all 0.3s ease;
 }
 
-.voice-header p {
-  color: #777;
-  font-size: 14px;
-}
-
-.add-btn {
-  background: #9333ea;
-  color: white;
-  padding: 8px 16px;
-  border-radius: 6px;
-  border: none;
-  cursor: pointer;
-  font-weight: 500;
-}
-
-.add-btn:hover {
-  opacity: 0.9;
-}
-
-.voice-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
-  gap: 16px;
-}
-
-.voice-card {
-  background: white;
-  padding: 16px;
-  border-radius: 10px;
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.05);
-  transition: 0.2s;
-}
-
-.voice-card:hover {
+.class-card-row:hover {
   transform: translateY(-3px);
 }
 
-.voice-card-header {
+/* =============================
+   BEAUTIFIED CLASS HEADER
+============================= */
+.class-header-card {
   display: flex;
-  justify-content: space-between;
   align-items: center;
+  justify-content: space-between;
+  background: #ffffff;
+  padding: 16px 24px;
+  border-radius: 12px;
+  transition: all 0.3s ease;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+  cursor: pointer;
+  border: 1px solid #eee;
 }
 
-.voice-card h3 {
-  font-size: 16px;
+.class-header-card:hover {
+  transform: translateY(-3px);
+  background: #faf5ff;
+  box-shadow: 0 4px 12px rgba(147, 51, 234, 0.15);
+}
+
+.class-title-block {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.class-title {
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: #4b0082;
+  letter-spacing: 0.3px;
+}
+
+.class-dept-tag {
+  background: #f3e8ff;
+  color: #7e22ce;
+  padding: 3px 10px;
+  border-radius: 20px;
+  font-size: 0.8rem;
+  font-weight: 500;
+}
+
+.class-subinfo {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  margin-top: 6px;
+  color: #4b5563;
+  font-size: 0.9rem;
+}
+
+.active-row {
+  background: #f9f5ff;
+  border-left: 4px solid #9333ea;
+}
+
+/* Hover glow effect for active class row */
+.class-header-card:hover .class-title {
+  color: #7e22ce;
+}
+
+/* =============================
+   STUDENT CARD STACK
+============================= */
+.student-list {
+  background: #fafafa;
+  padding: 10px 16px 16px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  transition: 0.3s ease;
+}
+
+.student-card {
+  background: #fff;
+  border-radius: 10px;
+  box-shadow: 0 1px 6px rgba(0, 0, 0, 0.05);
+  padding: 10px 14px;
+  display: flex;
+  flex-direction: column;
+  transition: all 0.3s ease;
+}
+
+.student-card:hover {
+  transform: translateY(-2px);
+  background: #f9fafb;
+  box-shadow: 0 2px 10px rgba(147, 51, 234, 0.1);
+}
+
+/* Row of fields inside each student card */
+.student-card-row {
+  display: grid;
+  grid-template-columns: 0.4fr 1.2fr 1.2fr 1fr 1fr 0.8fr 1fr 1fr 1.3fr;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.9rem;
+  color: #374151;
+}
+
+.student-field {
+  padding: 4px 6px;
+}
+
+.student-field.sno {
   font-weight: 600;
-  margin: 0;
-}
-
-.voice-status {
-  background: #22c55e22;
-  color: #22c55e;
-  font-size: 12px;
-  padding: 4px 8px;
-  border-radius: 4px;
-}
-
-.voice-details {
-  margin-top: 10px;
-  font-size: 13px;
-  color: #555;
-}
-
-.voice-details p {
-  margin: 4px 0;
-}
-
-/* =======================
-   RESPONSIVE
-======================= */
-@media (max-width: 768px) {
-  .stats-grid {
-    grid-template-columns: 1fr;
-  }
-
-  .action-buttons {
-    flex-wrap: wrap;
-  }
-
-  .records-table {
-    display: block;
-    overflow-x: auto;
-  }
-}
-
-
-/* Recording status */
-.record-status {
-  margin: 15px 0;
-  padding: 10px 18px;
-  background: #ede9fe;
-  color: #5b21b6;
-  border-radius: 8px;
-  font-weight: 600;
+  color: #6b7280;
   text-align: center;
+}
+
+.student-field.name {
+  font-weight: 600;
+  color: #111827;
+}
+
+.student-field.status.present {
+  color: #16a34a;
+  font-weight: 600;
+}
+
+.student-field.status.absent {
+  color: #dc2626;
+  font-weight: 600;
+}
+
+.student-field.feedback select {
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  padding: 4px;
+  font-size: 0.85rem;
+  background: #fff;
+}
+
+.feedback-correct {
+  color: #16a34a;
+  font-size: 0.8rem;
+  display: block;
+  margin-top: 2px;
+}
+
+.feedback-incorrect {
+  color: #dc2626;
+  font-size: 0.8rem;
+  display: block;
+  margin-top: 2px;
+}
+
+/* =============================
+   STUDENT CARD HIGHLIGHT ANIMATION
+============================= */
+@keyframes pulseGlow {
+  0% {
+    box-shadow: 0 0 0px rgba(147, 51, 234, 0);
+  }
+  50% {
+    box-shadow: 0 0 18px rgba(147, 51, 234, 0.4);
+  }
+  100% {
+    box-shadow: 0 0 0px rgba(147, 51, 234, 0);
+  }
+}
+
+.student-card.highlighted {
+  animation: pulseGlow 0.7s ease-in-out 2;
+  border: 1.5px solid #a855f7;
+  background: #faf5ff;
+}
+
+/* =============================
+   RESPONSIVE DESIGN
+============================= */
+@media (max-width: 900px) {
+  .student-card-row {
+    grid-template-columns: 1fr 1fr;
+    row-gap: 6px;
+  }
+
+  .class-header-card {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+  }
+
+  .class-right {
+    align-self: flex-end;
+  }
+}
+
+
+.student-list-label {
+  font-size: 1rem;
+  font-weight: 600;
+  color: #4b0082;
+  margin: 6px 0 8px 4px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  letter-spacing: 0.3px;
+}
+
+
+/* =============================
+   STUDENT HEADER LABEL ROW
+============================= */
+.student-list-header {
+  display: grid;
+  grid-template-columns: 0.4fr 1.2fr 1.2fr 1fr 1fr 0.8fr 1fr 1fr 1.3fr;
+  align-items: center;
+  background: #f3e8ff;
+  border-radius: 8px;
+  padding: 8px 14px;
+  margin-bottom: 6px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: #4b0082;
+  box-shadow: inset 0 0 2px rgba(0, 0, 0, 0.05);
+}
+
+.student-list-header .student-field {
+  text-align: left;
+  font-weight: 600;
+  letter-spacing: 0.2px;
+}
+
+.student-list-header .sno {
+  text-align: center;
+}
+
+
+
+
+
+
+/* ==============================
+   ADD CLASS MODAL (New Design)
+============================== */
+
+.add-class-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(17, 24, 39, 0.55);
+  backdrop-filter: blur(8px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
   animation: fadeIn 0.3s ease-in-out;
 }
 
-/* Highlight active class row during recording */
-.active-class {
-  background-color: #f3e8ff !important;
-  transition: background 0.3s ease;
+.add-class-modal {
+  background: linear-gradient(145deg, #ffffff, #f8f5ff);
+  border: 1px solid #e5e7eb;
+  box-shadow: 0 10px 35px rgba(147, 51, 234, 0.15);
+  border-radius: 16px;
+  padding: 30px 36px;
+  width: 400px;
+  max-width: 90%;
+  text-align: center;
+  animation: scaleIn 0.3s ease-in-out;
+}
+
+.add-class-title {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: #4b0082;
+  margin-bottom: 8px;
+}
+
+.add-class-subtitle {
+  font-size: 0.9rem;
+  color: #6b7280;
+  margin-bottom: 24px;
+}
+
+.add-class-form {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  text-align: left;
+}
+
+.add-class-form label {
+  font-weight: 600;
+  color: #4b0082;
+  font-size: 0.9rem;
+}
+
+.add-class-form input {
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  padding: 10px;
+  font-size: 0.95rem;
+  outline: none;
+  transition: all 0.2s;
+}
+
+.add-class-form input:focus {
+  border-color: #9333ea;
+  box-shadow: 0 0 0 3px rgba(147, 51, 234, 0.15);
+}
+
+.add-class-actions {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  margin-top: 28px;
+}
+
+.btn-create {
+  flex: 1;
+  background: linear-gradient(90deg, #7c3aed, #9f67ff);
+  border: none;
+  border-radius: 10px;
+  color: white;
+  font-weight: 600;
+  padding: 10px 14px;
+  cursor: pointer;
+  transition: all 0.25s ease;
+}
+
+.btn-create:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(124, 58, 237, 0.25);
+}
+
+.btn-cancel {
+  flex: 1;
+  background: #f3f4f6;
+  border: 1px solid #e5e7eb;
+  border-radius: 10px;
+  color: #374151;
+  font-weight: 600;
+  padding: 10px 14px;
+  cursor: pointer;
+  transition: all 0.25s ease;
+}
+
+.btn-cancel:hover {
+  background: #e5e7eb;
+}
+
+
+
+/* Dropdown styling */
+.add-class-select {
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  padding: 10px;
+  font-size: 0.95rem;
+  outline: none;
+  background-color: #fff;
+  color: #374151;
+  transition: all 0.2s ease;
+  appearance: none; /* hides default arrow */
+  background-image: url("data:image/svg+xml,%3Csvg fill='none' stroke='%236b7280' stroke-width='2' viewBox='0 0 24 24' xmlns='http://www.w3.org/2000/svg'%3E<path stroke-linecap='round' stroke-linejoin='round' d='M19 9l-7 7-7-7'%3E%3C/path%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 12px center;
+  background-size: 16px;
+}
+
+.add-class-select:focus {
+  border-color: #9333ea;
+  box-shadow: 0 0 0 3px rgba(147, 51, 234, 0.15);
 }

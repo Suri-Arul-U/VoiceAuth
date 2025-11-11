@@ -18,6 +18,7 @@ const VoiceProfiles = () => {
   const [showModal, setShowModal] = useState(false);
   const [recording, setRecording] = useState(false);
   const [audioBlob, setAudioBlob] = useState(null);
+  const [uploadFile, setUploadFile] = useState(null);
   const [recorder, setRecorder] = useState(null);
 
   // Fetch existing profiles
@@ -40,6 +41,15 @@ const VoiceProfiles = () => {
     setForm({ ...form, [e.target.name]: e.target.value });
   };
 
+  // Handle upload file
+  const handleFileUpload = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      setUploadFile(file);
+      setAudioBlob(null); // Reset recorded blob if uploading manually
+    }
+  };
+
   // Recording logic
   const handleRecord = async () => {
     try {
@@ -57,6 +67,7 @@ const VoiceProfiles = () => {
       mediaRecorder.onstop = () => {
         const blob = new Blob(chunks, { type: "audio/wav" });
         setAudioBlob(blob);
+        setUploadFile(null); // Reset uploaded file if recording
         stream.getTracks().forEach((t) => t.stop());
       };
 
@@ -92,8 +103,12 @@ const VoiceProfiles = () => {
       formData.append("usn", form.usn);
       formData.append("department", form.department);
       formData.append("class_name", form.class_name);
+
+      // Append the audio (recorded or uploaded)
       if (audioBlob) {
         formData.append("audio", audioBlob, `${form.usn}.wav`);
+      } else if (uploadFile) {
+        formData.append("audio", uploadFile);
       }
 
       await axios.post(`${API_BASE}/profiles`, formData, {
@@ -102,6 +117,7 @@ const VoiceProfiles = () => {
 
       setForm({ fullName: "", usn: "", department: "", class_name: "" });
       setAudioBlob(null);
+      setUploadFile(null);
       setShowModal(false);
       fetchProfiles();
       alert("✅ Voice profile created successfully!");
@@ -122,7 +138,7 @@ const VoiceProfiles = () => {
             <p>Manage user voice profiles and link them with class records</p>
           </div>
           <button className="add-btn" onClick={() => setShowModal(true)}>
-            + Add Profile
+            Add Profile
           </button>
         </div>
 
@@ -172,8 +188,22 @@ const VoiceProfiles = () => {
                   {recording ? "🎙 Recording..." : "🎤 Record Voice"}
                 </button>
 
-                {audioBlob && (
-                  <audio controls src={URL.createObjectURL(audioBlob)} />
+                {/* Uploaded file input */}
+                <label className="upload-label">
+                  or Upload an existing voice sample
+                </label>
+                <input
+                  type="file"
+                  accept="audio/*"
+                  onChange={handleFileUpload}
+                  className="upload-input"
+                />
+
+                {(audioBlob || uploadFile) && (
+                  <audio
+                    controls
+                    src={URL.createObjectURL(audioBlob || uploadFile)}
+                  />
                 )}
               </div>
 
@@ -200,13 +230,20 @@ const VoiceProfiles = () => {
                   />
 
                   <label>Department</label>
-                  <input
-                    type="text"
+                  <select
                     name="department"
                     value={form.department}
                     onChange={handleChange}
-                    placeholder="e.g., CSE"
-                  />
+                    className="department-select"
+                  >
+  <option value="">Select Department</option>
+  <option value="CSE">Computer Science and Engineering</option>
+  <option value="AI">Artificial Intelligence</option>
+  <option value="ECE">Electronics and Communication Engineering</option>
+  <option value="EEE">Electrical and Electronics Engineering</option>
+  <option value="MECH">Mechanical Engineering</option>
+  <option value="MINING">Mining Engineering</option>
+                  </select>
 
                   <label>Class Name</label>
                   <input
