@@ -171,22 +171,9 @@ def _run_attendance_session(class_name):
         print(f"\n🎧 Listening for {name} ({sid})...")
         announce_student(name)
 
-        # 🟡 Mark as 'Not Marked' before recording (to avoid confusion)
-        db.temp_attendance.update_one(
-            {"class_name": class_name, "student_id": sid},
-            {"$set": {
-                "status": "Not Marked",
-                "confidence": 0.0,
-                "timestamp": datetime.utcnow()
-            }},
-            upsert=True,
-        )
-
-        # Record new voice sample
         filename = f"{sid}_{datetime.utcnow().strftime('%Y%m%d_%H%M%S')}.wav"
         filepath = os.path.join(TMP_AUDIO_DIR, filename)
         record_audio(filepath, duration=DURATION)
-
 
         speech, rms = is_speech_present(filepath)
         if not speech:
@@ -285,8 +272,29 @@ def finish_class_attendance(class_name):
         )
 
     presents = [r for r in results if r["status"] == "Present"]
+    absents = [r for r in results if r["status"] == "Absent"]
     avg_conf = round(sum(r.get("confidence", 0) for r in results) / max(len(results), 1), 2)
     now = datetime.utcnow()
+
+    # ✅ Update per-student check-in count
+    for r in results:
+        if r["status"] == "Present":
+            db.students.update_one(
+                {"student_id": r["student_id"]},
+                {"$inc": {"stats.total_checkins": 1}}
+            )
+        else:
+            # ensure student exists, initialize if missing
+            db.students.update_one(
+                {"student_id": r["student_id"]},
+                {"$setOnInsert": {"stats.total_checkins": 0}},
+                upsert=True
+            )
+
+    # ✅ Calculate total check-ins for the class
+    total_checkins = len(presents)
+
+    # ✅ Update or append today's attendance summary
     db.classes.update_one(
         {"class_name": class_name},
         {"$push": {
@@ -294,21 +302,31 @@ def finish_class_attendance(class_name):
                 "date": now.strftime("%Y-%m-%d"),
                 "time": now.strftime("%H:%M:%S"),
                 "avg_confidence": avg_conf,
-                "checkin_count": len(presents),
+                "checkin_count": total_checkins,
                 "students": results,
             }
         }},
         upsert=True,
     )
 
-    # ✅ Preserve last known snapshot until next midnight
+    # ✅ Also update class summary fields (for dashboard top row)
+    db.classes.update_one(
+        {"class_name": class_name},
+        {
+            "$set": {
+                "confidence": avg_conf,
+                "status": "Recorded",
+                "date": now.strftime("%Y-%m-%d"),
+                "time": now.strftime("%H:%M:%S"),
+                "checkin_count": total_checkins,
+            }
+        }
+    )
+
+
     db.temp_attendance.delete_many({"class_name": class_name})
     if results:
-        for r in results:
-            r["expires_at"] = (datetime.utcnow().replace(hour=0, minute=0, second=0, microsecond=0)
-                           + timedelta(days=1))
         db.temp_attendance.insert_many(results)
-
     del active_sessions[class_name]
     print(f"✅ Finalized {class_name} — {len(results)} records | Avg={avg_conf}% | Checkins={len(presents)}")
     return results

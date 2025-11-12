@@ -235,13 +235,18 @@ def check_attendance_status(class_name: str):
 # newly added this temp
 
 @app.get("/attendance/temp/{class_name}")
-def get_temp_attendance(class_name: str):
+def get_temp_results(class_name: str):
     db = get_db()
-    now = datetime.utcnow()
-    # Automatically remove expired records (after midnight)
-    db.temp_attendance.delete_many({"expires_at": {"$lte": now}})
-    records = list(db.temp_attendance.find({"class_name": class_name}, {"_id": 0}))
-    return records
+    data = list(db.temp_attendance.find({"class_name": class_name}, {"_id": 0}))
+    return {"results": data}
+
+
+@app.delete("/attendance/temp/{class_name}/clear")
+def clear_temp_attendance(class_name: str):
+    """Delete previous temporary attendance for a clean start"""
+    db = get_db()
+    result = db.temp_attendance.delete_many({"class_name": class_name})
+    return {"message": f"Cleared {result.deleted_count} temp records for {class_name}"}
 
 
 
