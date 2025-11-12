@@ -21,7 +21,7 @@ from fastapi import Request
 from mongodb import get_db, seed_students
 from attendance_inference import (
     process_attendance,
-    process_class_attendance,
+    #process_class_attendance,
     start_class_attendance,
     pause_class_attendance,
     resume_class_attendance,
@@ -235,10 +235,14 @@ def check_attendance_status(class_name: str):
 # newly added this temp
 
 @app.get("/attendance/temp/{class_name}")
-def get_temp_results(class_name: str):
+def get_temp_attendance(class_name: str):
     db = get_db()
-    data = list(db.temp_attendance.find({"class_name": class_name}, {"_id": 0}))
-    return {"results": data}
+    now = datetime.utcnow()
+    # Automatically remove expired records (after midnight)
+    db.temp_attendance.delete_many({"expires_at": {"$lte": now}})
+    records = list(db.temp_attendance.find({"class_name": class_name}, {"_id": 0}))
+    return records
+
 
 
 
@@ -266,18 +270,43 @@ async def update_attendance(request: Request):
         raise HTTPException(status_code=400, detail="Invalid format — expected list")
 
     for u in updates:
+        student_id = u.get("student_id")
+        class_name = u.get("class_name")
+        feedback = u.get("feedback", "")
+        status = u.get("status", "")
+        confidence = float(u.get("confidence", 0))
+
+        # 🧠 Feedback correction logic
+        # If feedback is "Incorrect":
+        #   - If originally Absent → mark Present
+        #   - If originally Present → mark Absent
+        if feedback == "Incorrect":
+            if status == "Absent":
+                status = "Present"
+            elif status == "Present":
+                status = "Absent"
+
+        # Update database
         db.attendance.update_one(
-            {"student_id": u.get("student_id"), "class_name": u.get("class_name")},
+            {"student_id": student_id, "class_name": class_name},
             {"$set": {
-                "status": u.get("status"),
-                "feedback": u.get("feedback", ""),
-                "confidence": u.get("confidence", 0),
+                "status": status,
+                "feedback": feedback,
+                "confidence": confidence,
                 "updated_at": datetime.utcnow()
             }},
             upsert=True
         )
 
-    return {"message": "✅ Attendance updated successfully"}
+        # ✅ Optionally, sync this corrected status back to student stats
+        if status == "Present":
+            db.students.update_one(
+                {"student_id": student_id},
+                {"$inc": {"stats.total_checkins": 1}}
+            )
+
+    return {"message": "✅ Attendance updated with feedback corrections"}
+
 
 
 # -------------------------------------------------------------------
@@ -410,30 +439,76 @@ def feedback(feedback_in: FeedbackIn):
     if not student:
         raise HTTPException(status_code=404, detail="Student not found")
 
-    # Store audio_path only if it's valid
-    if feedback_in.verified:
-        # Add to verified samples
-        db.students.update_one(
-            {"student_id": feedback_in.student_id},
-            {"$addToSet": {"verified_samples": feedback_in.audio_path}},
-        )
-        message = "✅ Voice sample verified as correct."
-    else:
-        # Move to invalid samples (ignored in training)
-        db.students.update_one(
-            {"student_id": feedback_in.student_id},
-            {"$addToSet": {"invalid_samples": feedback_in.audio_path}},
-        )
-        message = "❌ Voice sample marked as incorrect (ignored in future checks)."
+    # 🧠 Get the latest attendance record (for its audio_path)
+    recent_attendance = db.attendance.find_one(
+        {"student_id": feedback_in.student_id},
+        sort=[("updated_at", -1)]
+    )
+    # Use the audio path from frontend or the latest record
+    audio_path = feedback_in.audio_path or (recent_attendance.get("audio_path") if recent_attendance else None)
 
-    # Retrain if verified_samples ≥ 5
+    if not audio_path or not os.path.exists(audio_path):
+        print(f"⚠️ WARNING: No valid audio path found for {feedback_in.student_id}")
+        raise HTTPException(status_code=400, detail="Audio path not found or invalid.")
+
+    # 🧩 Determine previous attendance status (to interpret feedback)
+    last_status = recent_attendance.get("status", "Unknown") if recent_attendance else "Unknown"
+
+    message = ""
+
+    # 🧠 Updated feedback logic with auto path fix
+    if feedback_in.verified:
+        # ✅ User said Correct — always add to verified
+        db.students.update_one(
+            {"student_id": feedback_in.student_id},
+            {
+                "$push": {"verified_samples": {
+                    "$each": [audio_path],
+                    "$slice": -10  # keep latest 10
+                }}
+            },
+        )
+        message = f"✅ Voice sample verified and saved ({audio_path})."
+
+    else:
+        # ❌ Feedback says Incorrect
+        if last_status == "Absent":
+            # Was absent but user says incorrect → actually Present → add to verified
+            db.students.update_one(
+                {"student_id": feedback_in.student_id},
+                {
+                    "$push": {"verified_samples": {
+                        "$each": [audio_path],
+                        "$slice": -10
+                    }}
+                },
+            )
+            message = f"✅ Voice sample added to verified (was marked absent)."
+        elif last_status == "Present":
+            # Was present but user says incorrect → invalid
+            db.students.update_one(
+                {"student_id": feedback_in.student_id},
+                {"$addToSet": {"invalid_samples": audio_path}},
+            )
+            message = f"❌ Voice sample marked invalid (was wrongly matched)."
+        else:
+            message = "⚠️ No prior attendance record found."
+
+    # 🔁 Retrain if verified_samples ≥ 10
     verified_count = len(
         db.students.find_one({"student_id": feedback_in.student_id}).get("verified_samples", [])
     )
-    if verified_count >= 5:
+    if verified_count >= 10:
         trigger_retrain_background()
 
-    return {"status": "ok", "message": message, "verified_count": verified_count}
+    return {
+        "status": "ok",
+        "message": message,
+        "verified_count": verified_count,
+        "audio_path_used": audio_path
+    }
+
+
 
 
 # -------------------------------------------------------------------
